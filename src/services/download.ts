@@ -1,26 +1,41 @@
 import type { DownloadProgress } from '../types';
 
-// CORS proxy for GitHub release asset downloads
-// GitHub assets redirect to S3 which doesn't have CORS headers
-const CORS_PROXY = 'https://proxy.corsfix.com/?';
+// List of CORS proxies to try in order
+const CORS_PROXIES = [
+  (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+];
 
 export async function downloadAsset(
   url: string,
   onProgress?: (progress: DownloadProgress) => void
 ): Promise<Blob> {
-  const proxiedUrl = `${CORS_PROXY}${encodeURIComponent(url)}`;
+  let lastError: Error | null = null;
 
-  const response = await fetch(proxiedUrl);
-
-  if (!response.ok) {
-    throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+  for (const makeProxyUrl of CORS_PROXIES) {
+    const proxiedUrl = makeProxyUrl(url);
+    try {
+      const response = await fetch(proxiedUrl);
+      if (!response.ok) {
+        throw new Error(`${response.status}`);
+      }
+      return await downloadWithProgress(response, onProgress);
+    } catch (e) {
+      lastError = e as Error;
+      continue;
+    }
   }
 
+  throw new Error(`Download failed: ${lastError?.message || 'All proxies failed'}`);
+}
+
+async function downloadWithProgress(
+  response: Response,
+  onProgress?: (progress: DownloadProgress) => void
+): Promise<Blob> {
   const contentLength = response.headers.get('Content-Length');
   const total = contentLength ? parseInt(contentLength, 10) : 0;
 
   if (!response.body) {
-    // Fallback for browsers without streaming support
     return await response.blob();
   }
 
@@ -30,7 +45,6 @@ export async function downloadAsset(
 
   while (true) {
     const { done, value } = await reader.read();
-
     if (done) break;
 
     chunks.push(value);
