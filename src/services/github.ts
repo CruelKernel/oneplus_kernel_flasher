@@ -12,7 +12,7 @@ export class GitHubService {
     }
 
     const response = await fetch(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases`
+      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases`,
     );
 
     if (!response.ok) {
@@ -32,15 +32,11 @@ export class GitHubService {
   }
 
   getPatchedImageAsset(release: GitHubRelease): GitHubAsset | null {
-    return release.assets.find(
-      a => a.name === 'magisk_patched_init_boot.img'
-    ) || null;
+    return release.assets.find(a => a.name === 'magisk_patched_init_boot.img') || null;
   }
 
   getStockImageAsset(release: GitHubRelease): GitHubAsset | null {
-    return release.assets.find(
-      a => a.name === 'init_boot.img'
-    ) || null;
+    return release.assets.find(a => a.name === 'init_boot.img') || null;
   }
 
   clearCache(): void {

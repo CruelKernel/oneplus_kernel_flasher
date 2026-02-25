@@ -7,7 +7,7 @@ const CORS_PROXIES = [
 
 export async function downloadAsset(
   url: string,
-  onProgress?: (progress: DownloadProgress) => void
+  onProgress?: (progress: DownloadProgress) => void,
 ): Promise<Blob> {
   let lastError: Error | null = null;
 
@@ -30,7 +30,7 @@ export async function downloadAsset(
 
 async function downloadWithProgress(
   response: Response,
-  onProgress?: (progress: DownloadProgress) => void
+  onProgress?: (progress: DownloadProgress) => void,
 ): Promise<Blob> {
   const contentLength = response.headers.get('Content-Length');
   const total = contentLength ? parseInt(contentLength, 10) : 0;

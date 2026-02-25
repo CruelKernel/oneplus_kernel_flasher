@@ -1,8 +1,8 @@
 export interface ParsedVersion {
-  modelCode: string;       // "CPH2551"
-  version: string;         // "15.0.0.822"
-  regionCode: string;      // "EX01"
-  fullVersion: string;     // Original string
+  modelCode: string; // "CPH2551"
+  version: string; // "15.0.0.822"
+  regionCode: string; // "EX01"
+  fullVersion: string; // Original string
 }
 
 /**
@@ -11,9 +11,7 @@ export interface ParsedVersion {
  */
 export function parseVersion(versionString: string): ParsedVersion | null {
   // Pattern: CPH2551_15.0.0.822(EX01)
-  const match = versionString.match(
-    /^(CPH\d+)_(\d+\.\d+\.\d+\.\d+)\(([A-Z0-9]+)\)$/
-  );
+  const match = versionString.match(/^(CPH\d+)_(\d+\.\d+\.\d+\.\d+)\(([A-Z0-9]+)\)$/);
 
   if (!match) return null;
 
