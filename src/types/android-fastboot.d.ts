@@ -18,7 +18,7 @@ declare module 'android-fastboot' {
     flashBlob(
       partition: string,
       blob: Blob,
-      onProgress?: (progress: number) => void
+      onProgress?: (progress: number) => void,
     ): Promise<void>;
 
     reboot(target?: string, wait?: boolean, onReconnect?: () => void): Promise<void>;

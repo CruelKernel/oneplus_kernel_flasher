@@ -34,10 +34,13 @@ function App() {
     setAppState(prev => ({ ...prev, state, ...extra }));
   }, []);
 
-  const setError = useCallback((error: string) => {
-    addLog(`Error: ${error}`);
-    setState('ERROR', { error });
-  }, [addLog, setState]);
+  const setError = useCallback(
+    (error: string) => {
+      addLog(`Error: ${error}`);
+      setState('ERROR', { error });
+    },
+    [addLog, setState],
+  );
 
   // Check browser support
   const checkBrowser = useCallback(() => {
@@ -77,33 +80,36 @@ function App() {
   }, [addLog, setState, setError]);
 
   // Find matching GitHub release
-  const findRelease = useCallback(async (deviceInfo: DeviceInfo) => {
-    setState('FETCHING_RELEASES');
-    addLog('Fetching available releases...');
+  const findRelease = useCallback(
+    async (deviceInfo: DeviceInfo) => {
+      setState('FETCHING_RELEASES');
+      addLog('Fetching available releases...');
 
-    try {
-      const release = await githubService.current.findMatchingRelease(deviceInfo.firmwareVersion);
+      try {
+        const release = await githubService.current.findMatchingRelease(deviceInfo.firmwareVersion);
 
-      if (!release) {
-        addLog(`No release found for firmware ${deviceInfo.firmwareVersion}`);
-        setState('RELEASE_NOT_FOUND');
-        return;
+        if (!release) {
+          addLog(`No release found for firmware ${deviceInfo.firmwareVersion}`);
+          setState('RELEASE_NOT_FOUND');
+          return;
+        }
+
+        const asset = githubService.current.getPatchedImageAsset(release);
+        if (!asset) {
+          setError('Release found but no patched image available');
+          return;
+        }
+
+        addLog(`Found matching release: ${release.tag_name}`);
+        addLog(`Patched image: ${asset.name} (${formatFileSize(asset.size)})`);
+        setState('RELEASE_MATCHED', { matchedRelease: release });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        setError(`Failed to fetch releases: ${message}`);
       }
-
-      const asset = githubService.current.getPatchedImageAsset(release);
-      if (!asset) {
-        setError('Release found but no patched image available');
-        return;
-      }
-
-      addLog(`Found matching release: ${release.tag_name}`);
-      addLog(`Patched image: ${asset.name} (${formatFileSize(asset.size)})`);
-      setState('RELEASE_MATCHED', { matchedRelease: release });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      setError(`Failed to fetch releases: ${message}`);
-    }
-  }, [addLog, setState, setError]);
+    },
+    [addLog, setState, setError],
+  );
 
   // Connect to device via ADB
   const connectAdb = useCallback(async () => {
@@ -141,7 +147,9 @@ function App() {
     const asset = githubService.current.getPatchedImageAsset(release);
     if (!asset) return;
 
-    setState('DOWNLOADING_IMAGE', { downloadProgress: { loaded: 0, total: asset.size, percentage: 0 } });
+    setState('DOWNLOADING_IMAGE', {
+      downloadProgress: { loaded: 0, total: asset.size, percentage: 0 },
+    });
     addLog('Downloading patched image...');
 
     try {
@@ -183,7 +191,9 @@ function App() {
   const flashImage = useCallback(async () => {
     if (!appState.imageBlob) return;
 
-    setState('FLASHING', { flashProgress: { action: 'preparing', partition: 'init_boot', progress: 0 } });
+    setState('FLASHING', {
+      flashProgress: { action: 'preparing', partition: 'init_boot', progress: 0 },
+    });
     addLog('Flashing init_boot partition...');
 
     try {
@@ -287,7 +297,8 @@ function App() {
             <div className="text-red-500 text-5xl mb-4">!</div>
             <h2 className="text-xl font-semibold mb-4">Browser Not Supported</h2>
             <p className="text-gray-400">
-              This tool requires WebUSB which is only available in Chrome, Edge, or other Chromium-based browsers.
+              This tool requires WebUSB which is only available in Chrome, Edge, or other
+              Chromium-based browsers.
             </p>
           </div>
         );
@@ -297,7 +308,9 @@ function App() {
           <div className="text-center">
             <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
             <p className="text-gray-400">Connecting to device...</p>
-            <p className="text-gray-500 text-sm mt-2">Accept the USB debugging prompt on your device if shown.</p>
+            <p className="text-gray-500 text-sm mt-2">
+              Accept the USB debugging prompt on your device if shown.
+            </p>
           </div>
         );
 
@@ -364,8 +377,9 @@ function App() {
                 <h3 className="font-semibold text-green-400 mb-2">Release Found</h3>
                 <p className="text-gray-400">Version: {appState.matchedRelease.tag_name}</p>
                 <p className="text-gray-400">
-                  Size: {formatFileSize(
-                    githubService.current.getPatchedImageAsset(appState.matchedRelease)?.size || 0
+                  Size:{' '}
+                  {formatFileSize(
+                    githubService.current.getPatchedImageAsset(appState.matchedRelease)?.size || 0,
                   )}
                 </p>
               </div>
@@ -392,8 +406,9 @@ function App() {
                   ></div>
                 </div>
                 <p className="text-gray-400">
-                  {formatFileSize(appState.downloadProgress.loaded)} / {formatFileSize(appState.downloadProgress.total)}
-                  {' '}({appState.downloadProgress.percentage.toFixed(1)}%)
+                  {formatFileSize(appState.downloadProgress.loaded)} /{' '}
+                  {formatFileSize(appState.downloadProgress.total)} (
+                  {appState.downloadProgress.percentage.toFixed(1)}%)
                 </p>
               </>
             )}
@@ -493,8 +508,8 @@ function App() {
                   ></div>
                 </div>
                 <p className="text-gray-400">
-                  {appState.flashProgress.action} {appState.flashProgress.partition}
-                  {' '}({(appState.flashProgress.progress * 100).toFixed(1)}%)
+                  {appState.flashProgress.action} {appState.flashProgress.partition} (
+                  {(appState.flashProgress.progress * 100).toFixed(1)}%)
                 </p>
               </>
             )}
@@ -517,7 +532,8 @@ function App() {
             <div className="text-green-500 text-6xl mb-4">&#10003;</div>
             <h2 className="text-2xl font-semibold mb-4">Flash Complete!</h2>
             <p className="text-gray-400 mb-6">
-              Your device has been flashed with Magisk. After it boots, install the Magisk app to complete the setup.
+              Your device has been flashed with Magisk. After it boots, install the Magisk app to
+              complete the setup.
             </p>
             <div className="flex gap-4 justify-center">
               <a
@@ -566,9 +582,7 @@ function App() {
           <p className="text-gray-400">Flash Magisk-patched init_boot.img via WebUSB</p>
         </header>
 
-        <main className="bg-gray-800 rounded-xl p-6 mb-6">
-          {renderContent()}
-        </main>
+        <main className="bg-gray-800 rounded-xl p-6 mb-6">{renderContent()}</main>
 
         <section className="bg-gray-800 rounded-xl p-4">
           <h3 className="font-semibold mb-2 text-sm text-gray-400">Log</h3>
@@ -577,7 +591,9 @@ function App() {
               <p className="text-gray-600">Waiting for action...</p>
             ) : (
               appState.logs.map((log, i) => (
-                <div key={i} className="text-gray-400">{log}</div>
+                <div key={i} className="text-gray-400">
+                  {log}
+                </div>
               ))
             )}
           </div>

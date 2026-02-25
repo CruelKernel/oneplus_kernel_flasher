@@ -34,7 +34,7 @@ export class FastbootService {
 
   async flashInitBoot(
     imageBlob: Blob,
-    onProgress?: (progress: FlashProgress) => void
+    onProgress?: (progress: FlashProgress) => void,
   ): Promise<void> {
     await this.device.flashBlob('init_boot', imageBlob, (progress: number) => {
       onProgress?.({
