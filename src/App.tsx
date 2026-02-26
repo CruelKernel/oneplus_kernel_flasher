@@ -187,6 +187,22 @@ function App() {
     }
   }, [addLog, setState, setError]);
 
+  // Reboot to system
+  const rebootSystem = useCallback(async () => {
+    setState('REBOOTING_SYSTEM');
+    addLog('Rebooting to system...');
+
+    try {
+      await fastbootService.current.reboot();
+      addLog('Device is rebooting');
+      setState('SUCCESS');
+    } catch {
+      // Reboot command might not return properly, treat as success
+      addLog('Reboot command sent');
+      setState('SUCCESS');
+    }
+  }, [addLog, setState]);
+
   // Flash the image
   const flashImage = useCallback(async () => {
     if (!appState.imageBlob) return;
@@ -210,23 +226,7 @@ function App() {
       const message = err instanceof Error ? err.message : 'Unknown error';
       setError(`Flash failed: ${message}`);
     }
-  }, [appState.imageBlob, addLog, setState, setError]);
-
-  // Reboot to system
-  const rebootSystem = useCallback(async () => {
-    setState('REBOOTING_SYSTEM');
-    addLog('Rebooting to system...');
-
-    try {
-      await fastbootService.current.reboot();
-      addLog('Device is rebooting');
-      setState('SUCCESS');
-    } catch {
-      // Reboot command might not return properly, treat as success
-      addLog('Reboot command sent');
-      setState('SUCCESS');
-    }
-  }, [addLog, setState]);
+  }, [appState.imageBlob, addLog, setState, setError, rebootSystem]);
 
   // Connect to device in fastboot mode
   const connectFastboot = useCallback(async () => {
