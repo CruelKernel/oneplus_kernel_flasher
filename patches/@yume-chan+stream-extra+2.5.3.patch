@@ -1,0 +1,26 @@
+diff --git a/node_modules/@yume-chan/stream-extra/esm/wrap-readable.js b/node_modules/@yume-chan/stream-extra/esm/wrap-readable.js
+index 60a63cc..9a54022 100644
+--- a/node_modules/@yume-chan/stream-extra/esm/wrap-readable.js
++++ b/node_modules/@yume-chan/stream-extra/esm/wrap-readable.js
+@@ -24,12 +24,15 @@ export class WrapReadableStream extends ReadableStream {
+     #reader;
+     constructor(wrapper, strategy) {
+         super({
+-            start: async (controller) => {
+-                const readable = await getWrappedReadableStream(wrapper, controller);
+-                // `start` is called in `super()`, so can't use `this` synchronously.
+-                // but it's fine after the first `await`
+-                this.readable = readable;
+-                this.#reader = this.readable.getReader();
++            start: (controller) => {
++                // Use .then() instead of await to prevent Rolldown from
++                // collapsing `const x = await ...; this.y = x` into
++                // `this.y = await ...` which moves `this` access before `await`,
++                // causing a TDZ violation during super().
++                return Promise.resolve(getWrappedReadableStream(wrapper, controller)).then((readable) => {
++                    this.readable = readable;
++                    this.#reader = readable.getReader();
++                });
+             },
+             pull: async (controller) => {
+                 const { done, value } = await this.#reader
