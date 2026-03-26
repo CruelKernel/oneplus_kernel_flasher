@@ -24,13 +24,13 @@
   },
   "devDependencies": {
     "@dreamsicle.io/stylelint-config-tailwindcss": "^1.2.2",
-    "@eslint/js": "^9.39.1",
+    "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.2.2",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
-    "eslint": "^9.39.1",
+    "eslint": "^10.1.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
@@ -42,8 +42,8 @@
     "stylelint": "^17.5.0",
     "stylelint-config-standard": "^40.0.0",
     "tailwindcss": "^4.2.2",
-    "typescript": "~5.9.3",
+    "typescript": "~6.0.2",
     "typescript-eslint": "^8.57.2",
-    "vite": "^8.0.2"
+    "vite": "^8.0.3"
   }
 }
