@@ -6,6 +6,9 @@ import { GitHubService } from './services/github';
 import { downloadAsset } from './services/download';
 import { parseVersion, isOnePlusOpen, formatFileSize } from './utils/version';
 
+// Holds the releases cache, so it must outlive reset()
+const githubService = new GitHubService();
+
 const initialState: AppState = {
   state: 'IDLE',
   deviceInfo: null,
@@ -21,7 +24,6 @@ function App() {
   const [appState, setAppState] = useState<AppState>(initialState);
   const adbService = useRef(new AdbService());
   const fastbootService = useRef(new FastbootService());
-  const githubService = useRef(new GitHubService());
 
   const addLog = useCallback((message: string) => {
     setAppState(prev => ({
@@ -86,7 +88,7 @@ function App() {
       addLog('Fetching available releases...');
 
       try {
-        const release = await githubService.current.findMatchingRelease(deviceInfo.firmwareVersion);
+        const release = await githubService.findMatchingRelease(deviceInfo.firmwareVersion);
 
         if (!release) {
           addLog(`No release found for firmware ${deviceInfo.firmwareVersion}`);
@@ -94,7 +96,7 @@ function App() {
           return;
         }
 
-        const asset = githubService.current.getPatchedImageAsset(release);
+        const asset = githubService.getPatchedImageAsset(release);
         if (!asset) {
           setError('Release found but no patched image available');
           return;
@@ -144,7 +146,7 @@ function App() {
     const release = appState.matchedRelease;
     if (!release) return;
 
-    const asset = githubService.current.getPatchedImageAsset(release);
+    const asset = githubService.getPatchedImageAsset(release);
     if (!asset) return;
 
     setState('DOWNLOADING_IMAGE', {
@@ -379,7 +381,7 @@ function App() {
                 <p className="text-gray-400">
                   Size:{' '}
                   {formatFileSize(
-                    githubService.current.getPatchedImageAsset(appState.matchedRelease)?.size || 0,
+                    githubService.getPatchedImageAsset(appState.matchedRelease)?.size || 0,
                   )}
                 </p>
               </div>
