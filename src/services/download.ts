@@ -5,27 +5,55 @@ const CORS_PROXIES = [
   (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
 ];
 
+// How long to wait for response headers before giving up on a proxy.
+// The body itself is not subject to this limit, so slow downloads still complete.
+const HEADERS_TIMEOUT_MS = 20_000;
+
 export async function downloadAsset(
   url: string,
+  expectedSize: number,
   onProgress?: (progress: DownloadProgress) => void,
 ): Promise<Blob> {
   let lastError: Error | null = null;
 
   for (const makeProxyUrl of CORS_PROXIES) {
-    const proxiedUrl = makeProxyUrl(url);
     try {
-      const response = await fetch(proxiedUrl);
+      const response = await fetchWithHeadersTimeout(makeProxyUrl(url));
       if (!response.ok) {
-        throw new Error(`${response.status}`);
+        throw new Error(`HTTP ${response.status}`);
       }
-      return await downloadWithProgress(response, onProgress);
+
+      // Proxies tend to answer with an HTML error page and a 200 status when the upstream fails
+      const contentType = response.headers.get('Content-Type') ?? '';
+      if (contentType.startsWith('text/html')) {
+        throw new Error('Proxy returned an HTML page instead of the image');
+      }
+
+      const blob = await downloadWithProgress(response, onProgress);
+      if (expectedSize > 0 && blob.size !== expectedSize) {
+        throw new Error(`Unexpected size: got ${blob.size} bytes, expected ${expectedSize}`);
+      }
+      return blob;
     } catch (e) {
-      lastError = e as Error;
-      continue;
+      lastError = e instanceof Error ? e : new Error(String(e));
     }
   }
 
-  throw new Error(`Download failed: ${lastError?.message || 'All proxies failed'}`);
+  throw lastError ?? new Error('All proxies failed');
+}
+
+async function fetchWithHeadersTimeout(url: string): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(new Error(`No response after ${HEADERS_TIMEOUT_MS / 1000}s`)),
+    HEADERS_TIMEOUT_MS,
+  );
+
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function downloadWithProgress(

@@ -8,6 +8,14 @@ A browser-based tool for flashing Magisk-patched `init_boot.img` files to OnePlu
 - OnePlus Open (CPH2551) with unlocked bootloader
 - USB cable
 
+## Manual download
+
+The patched image is fetched from GitHub through a public CORS proxy, which is not always
+available. If the automatic download fails, the app shows a "Download from GitHub" link: save
+`magisk_patched_init_boot.img` from the matching release, then pick it with "Select Downloaded
+File". The same picker is available as "Use Local init_boot.img" on the "Release Found" card. The
+file size must match the release asset exactly.
+
 ## Development
 
 ```bash

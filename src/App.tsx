@@ -5,6 +5,7 @@ import { FastbootService } from './services/fastboot';
 import { GitHubService } from './services/github';
 import { downloadAsset } from './services/download';
 import { parseVersion, isOnePlusOpen, formatFileSize } from './utils/version';
+import { LocalImagePicker } from './components/LocalImagePicker';
 
 // Holds the releases cache, so it must outlive reset()
 const githubService = new GitHubService();
@@ -155,17 +156,31 @@ function App() {
     addLog('Downloading patched image...');
 
     try {
-      const blob = await downloadAsset(asset.browser_download_url, (progress: DownloadProgress) => {
-        setAppState(prev => ({ ...prev, downloadProgress: progress }));
-      });
+      const blob = await downloadAsset(
+        asset.browser_download_url,
+        asset.size,
+        (progress: DownloadProgress) => {
+          setAppState(prev => ({ ...prev, downloadProgress: progress }));
+        },
+      );
 
       addLog(`Download complete: ${formatFileSize(blob.size)}`);
       setState('DOWNLOAD_COMPLETE', { imageBlob: blob, downloadProgress: null });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
-      setError(`Download failed: ${message}`);
+      addLog(`Download failed: ${message}`);
+      setState('DOWNLOAD_FAILED', { error: message, downloadProgress: null });
     }
-  }, [appState.matchedRelease, addLog, setState, setError]);
+  }, [appState.matchedRelease, addLog, setState]);
+
+  // Use a manually downloaded image instead of fetching it through a proxy
+  const selectLocalImage = useCallback(
+    (file: File) => {
+      addLog(`Using local image: ${file.name} (${formatFileSize(file.size)})`);
+      setState('DOWNLOAD_COMPLETE', { imageBlob: file, error: null, downloadProgress: null });
+    },
+    [addLog, setState],
+  );
 
   // Confirm and start flash
   const confirmFlash = useCallback(() => {
@@ -364,7 +379,10 @@ function App() {
           </div>
         );
 
-      case 'RELEASE_MATCHED':
+      case 'RELEASE_MATCHED': {
+        const asset = appState.matchedRelease
+          ? githubService.getPatchedImageAsset(appState.matchedRelease)
+          : null;
         return (
           <div className="text-center">
             {appState.deviceInfo && (
@@ -378,12 +396,7 @@ function App() {
               <div className="bg-green-900/30 border border-green-700 rounded-lg p-4 mb-6 text-left">
                 <h3 className="font-semibold text-green-400 mb-2">Release Found</h3>
                 <p className="text-gray-400">Version: {appState.matchedRelease.tag_name}</p>
-                <p className="text-gray-400">
-                  Size:{' '}
-                  {formatFileSize(
-                    githubService.getPatchedImageAsset(appState.matchedRelease)?.size || 0,
-                  )}
-                </p>
+                <p className="text-gray-400">Size: {formatFileSize(asset?.size ?? 0)}</p>
               </div>
             )}
             <button
@@ -392,8 +405,16 @@ function App() {
             >
               Download Patched Image
             </button>
+            <p className="text-gray-500 text-sm my-3">or</p>
+            <LocalImagePicker
+              expectedSize={asset?.size ?? 0}
+              label="Use Local init_boot.img"
+              className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+              onSelect={selectLocalImage}
+            />
           </div>
         );
+      }
 
       case 'DOWNLOADING_IMAGE':
         return (
@@ -416,6 +437,53 @@ function App() {
             )}
           </div>
         );
+
+      case 'DOWNLOAD_FAILED': {
+        const asset = appState.matchedRelease
+          ? githubService.getPatchedImageAsset(appState.matchedRelease)
+          : null;
+        return (
+          <div className="text-center">
+            <div className="text-red-500 text-5xl mb-4">&#10007;</div>
+            <h2 className="text-xl font-semibold mb-4">Download Failed</h2>
+            <p className="text-red-400 mb-4">{appState.error}</p>
+            <p className="text-gray-400 mb-6">
+              The download proxy is unavailable. Download the image from GitHub yourself, then
+              select it below.
+            </p>
+            <div className="flex gap-4 justify-center flex-wrap">
+              <button
+                onClick={downloadImage}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+              >
+                Retry Download
+              </button>
+              {asset && (
+                <a
+                  href={asset.browser_download_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                >
+                  Download from GitHub
+                </a>
+              )}
+              <LocalImagePicker
+                expectedSize={asset?.size ?? 0}
+                label="Select Downloaded File"
+                className="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                onSelect={selectLocalImage}
+              />
+              <button
+                onClick={reset}
+                className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+              >
+                Start Over
+              </button>
+            </div>
+          </div>
+        );
+      }
 
       case 'DOWNLOAD_COMPLETE':
         return (
