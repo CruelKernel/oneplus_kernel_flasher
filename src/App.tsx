@@ -193,8 +193,10 @@ function App() {
     addLog('Rebooting to bootloader...');
 
     try {
-      await adbService.current.rebootToBootloader();
-      await adbService.current.disconnect();
+      const warning = await adbService.current.rebootToBootloader();
+      if (warning) {
+        addLog(`USB connection dropped while sending the command: ${warning}`);
+      }
       addLog('Device is rebooting to bootloader');
       addLog('Please wait for the device to enter fastboot mode...');
       setState('WAITING_FASTBOOT');

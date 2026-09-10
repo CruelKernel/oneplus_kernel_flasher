@@ -56,17 +56,38 @@ export class AdbService {
     };
   }
 
-  async rebootToBootloader(): Promise<void> {
+  /**
+   * Sends the reboot-to-bootloader command and drops the connection.
+   *
+   * The device leaves the USB bus as soon as it acts on the command, so the transfer
+   * that carries it usually fails ("A transfer error has occurred") even though the
+   * reboot did happen. That failure is reported as a warning instead of an error;
+   * whether the device actually came back is decided by the fastboot connection.
+   */
+  async rebootToBootloader(): Promise<string | null> {
     if (!this.adb) {
       throw new Error('Not connected to device');
     }
-    await this.adb.power.bootloader();
+
+    const adb = this.adb;
+    this.adb = null;
+
+    try {
+      await adb.power.bootloader();
+      return null;
+    } catch (e) {
+      return e instanceof Error ? e.message : String(e);
+    } finally {
+      await adb.close().catch(() => {});
+    }
   }
 
   async disconnect(): Promise<void> {
     if (this.adb) {
-      await this.adb.close();
+      const adb = this.adb;
       this.adb = null;
+      // The device may already be gone, which makes closing the streams fail
+      await adb.close().catch(() => {});
     }
   }
 
